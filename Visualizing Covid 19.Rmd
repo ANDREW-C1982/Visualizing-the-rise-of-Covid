@@ -1,0 +1,443 @@
+---
+title: "Visualizing the rise of covid-19"
+author: "Andrew"
+date: "23/12/2020"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+   all_output_formats(input, output_yaml = NULL)
+---
+# 1.Objectives
+
+In December 2019, COVID-19 coronavirus was first identified in the Wuhan region of China. By March 11, 2020, the World Health Organization (WHO) categorized the COVID-19 outbreak as a pandemic. A lot has happened in the months in between with major outbreaks in Iran, South Korea,Italy,france,United Kingdom,Brazil,USA and South Africa.
+
+We know that COVID-19 spreads through respiratory droplets, such as through coughing, sneezing, or speaking. But, how quickly did the virus spread across the globe? And, can we see any effect from country-wide policies, like shutdowns and quarantines?
+
+In this essay,I will visualize COVID-19 data from the first several weeks of the outbreak to see at what point this virus became a global pandemic.This paper seeks to visualize and observe COVID19 cases, deaths, and recoveries through using Plotly a visualization tool available in python, and R which supports a number of interactive, high-quality graphs and is a great tool for data scientists.
+
+## Introduction
+
+The coronavirus (COVID-19) has not gone away and continues to have a major impact on people’s lives.
+
+Statistics allow us to keep track of the pandemic; not just through the number of deaths or infections, but also with measures of the impact on the economy and businesses, as well as people’s well-being, working situation and their daily routine.Here are 10 charts that show how the emergence of COVID-19 has affected life and society.
+
+
+## Problem Statement: 
+
+To to visualize and observe COVID19 cases, deaths,recoveries and observe patterns between new cases,deaths,recoveries and draw conclusions.
+
+
+## Importing Essential Libraries
+
+I will begin by importing our dependencies that we require. The following dependencies are popularly used for data wrangling operations and visualizations. 
+
+```{r libraries, message=FALSE}
+library(knitr)
+library(tidyverse)
+library(caret)
+library(dslabs)
+library(dplyr)
+library(ggplot2)
+library(matrixStats)
+library(data.table)
+library(lubridate)
+library(lattice)
+library(reshape2)
+library(mice)
+library(DataExplorer)
+library(VIM)
+library(readr)
+library(plotly)
+library(scales)
+library(ggpubr)
+```
+
+## Data-set:
+
+The data-set sources are accumulated, processed and latest updates are made available by “Johns Hopkins University Center for Systems Science and Engineering (JHU CSSE)” in their github page.
+
+## Loading the required datasets.
+
+Terms of use: As stated by JHU CSSE in link. [Data to be used only for research purposes].The data set has been loaded using the code below:
+
+```{r load dataset}
+# Load the readr, ggplot2, and dplyr packages
+devtools::install_github("RamiKrispin/coronavirus")
+library(coronavirus)
+update_dataset()
+```
+
+I will start with using the dim function to print out the dimensionality of our dataframe.
+
+```{r dim,echo=FALSE}
+dim(coronavirus)
+```
+
+The dataset has 268128 rows and 7 columns.
+
+I will use the summary() to review the contents and shape of the data.As its name implies, the summarize function reduces a data frame to a summary of just one vector or value. this function  is valuable because it often provides exactly what is needed in terms of summary statistics. 
+
+```{r summary function}
+summary(coronavirus)
+```
+
+Now that I have a general overview of the nature of the data as shown by the statistics above,I will move on to an in depth analysis.
+
+The str method will allows us to know the data type of each variable and factor levels if any.
+
+```{r str,echo=FALSE}
+str(coronavirus)
+```
+
+This `coronavirus` dataset has the following fields:
+
+  - `date` - The date of the summary
+- `province` - The province or state, when applicable
+- `country` - The country or region name
+- `lat` - Latitude point
+- `long` - Longitude point
+- `type` - the type of case (i.e., confirmed, death)
+- `cases` - the number of daily cases (corresponding to the case type)
+
+It is really hard to digest a huge dataset which have 7 columns  and have thousands of rows.I am going to use the head() to display and view the first n rows present in the input data frame as below:
+
+```{r data arrangement}
+head(coronavirus)
+```
+
+Another important aspect of showing your key findings is to use only a set of charts that infer key insight from the data rather than showing too much charts with redundant information.
+
+# 2. The global impact of COVID-19:Analysis
+
+Early on in the outbreak, the COVID-19 cases were primarily centered in China before it rapidy spreads into Europe,USA and the rest of the world.To understand the impact of the virus on a geographical landscape, I used the geographical scatter plot from Plotly to visualize:
+
+  ### 2.1 a treemap of the confirmed cases
+  ### 2.2 Geographical distribution of confirmed,deaths and recovered cases
+  ### 2.3 Density line plots of confirmed,deaths and recoevred cases
+  ### 2.4 Most affected countries in the world
+  ### 2.5 Least affected countries in the world2.Analysis:
+
+## Summary of the total confirmed cases:
+
+The table below shows the cumulative confirmed cases of COVID-19 worldwide by country. 
+
+```{r summary of confirmed cases}
+# Summary of the total confrimed cases by country (top 20):
+library(dplyr)
+summary_df <- coronavirus %>% 
+  filter(type == "confirmed") %>%
+  group_by(country) %>%
+  summarise(total_cases = sum(cases)) %>%
+  arrange(-total_cases)
+summary_df %>% head(20) 
+```
+
+Even though the outbreak was first identified in China, there is no country from East Asia in the above table amongst the world most affected countries.Four of the listed countries (France, Germany, Italy, and Spain) are in Europe and share borders.USA,India,Brazil,Russia,France,United Kindgom,Turkey,Italy,Spain and Germany have the highest number of total cases in the world,however just reading numbers in a table makes it hard to get a sense of the scale and growth of the outbreak. 
+
+## 2.1 Treemap of confirmed cases.
+
+```{r 2.1}
+# Plot the confirmed cases distribution by counrty with treemap plot:
+  conf_df <- coronavirus %>% 
+  filter(type == "confirmed") %>%
+  group_by(country) %>%
+  summarise(total_cases = sum(cases)) %>%
+  arrange(-total_cases) %>%
+  mutate(parents = "Confirmed") %>%
+  ungroup() 
+
+plot_ly(data = conf_df,
+        type= "treemap",
+        values = ~total_cases,
+        labels= ~ country,
+        parents=  ~parents,
+        domain = list(column=0),
+        name = "Confirmed",
+        textinfo="label+value+percent parent")
+```
+
+Observation:From the chart, we can see the disease has infected a larger number of people in USA,India,Braziland many european countries such as UK,France,Italy more than China where the virus was first discovered.
+
+## 2.2 Bubble maps 
+
+To get more context, we can plot the spread of confirmed,deaths and recovery using using bubble maps.These bubble maps will give a visual general overview  of the spread,death and recovery rates.
+
+```{r 2.2 bubble map of confirmed cases}
+#Geographical distribution of confirmed cases
+world <- map_data("world")
+confirmed_cases <- coronavirus %>% 
+filter(type == "confirmed") %>%
+group_by(country,long,lat) %>%
+summarise(total_cases = sum(cases)) %>%
+arrange(-total_cases) %>%
+mutate(case = "Confirmed") %>%
+ungroup()
+p0<-ggplot() +
+geom_polygon(data = world, aes(x=long, y=lat, group=group), fill="gray", colour = "darkgray", size=0.5, alpha=0.3) + #resizing to just CONUS
+geom_point(data=confirmed_cases, aes(x=long, y=lat, color=total_cases, size=total_cases), alpha=0.5) + #everything inside aes appears in legend
+coord_map() + #plotting with correct mercator projection (prior plot was cartesian coordinates)
+scale_color_viridis_c()+
+ggtitle("Confirmed COVID-19 Cases in the World.") +
+guides( colour = guide_legend()) +
+theme_void()  #gets rid of axes
+p0
+```
+
+
+```{r bubble map of death cases}
+#Geographical distribution of deaths cases
+death_cases <- coronavirus %>% 
+filter(type == "death") %>%
+group_by(country,long,lat) %>%
+summarise(total_cases = sum(cases)) %>%
+arrange(-total_cases) %>%
+mutate(case = "death") %>%
+ungroup()
+head(death_cases)
+p1<-ggplot() +
+geom_polygon(data = world, aes(x=long, y=lat, group=group), fill="gray", colour = "darkgray", size=0.5, alpha=0.3) + #resizing to just CONUS
+geom_point(data=death_cases, aes(x=long, y=lat, color=total_cases, size=total_cases), alpha=0.5) + #everything inside aes appears in legend
+coord_map() + #plotting with correct mercator projection (prior plot was cartesian coordinates)
+scale_color_viridis_c()+
+ggtitle("Death COVID-19 Cases in the World.") +
+guides( colour = guide_legend()) +
+theme_void()  #gets rid of axes
+p1
+```
+
+```{r bubble map of recovered cases}
+#Geographical distribution of recovered cases
+recovered_cases <- coronavirus %>% 
+filter(type == "recovered") %>%
+group_by(country,long,lat) %>%
+summarise(total_cases = sum(cases)) %>%
+arrange(-total_cases) %>%
+mutate(case = "recovered") %>%
+ungroup()
+head(death_cases)
+p2<-ggplot() +
+geom_polygon(data = world, aes(x=long, y=lat, group=group), fill="gray", colour = "darkgray", size=0.5, alpha=0.3) + #resizing to just CONUS
+geom_point(data=recovered_cases, aes(x=long, y=lat, color=total_cases, size=total_cases), alpha=0.5) + #everything inside aes appears in legend
+coord_map() + #plotting with correct mercator projection (prior plot was cartesian coordinates)
+scale_color_viridis_c()+
+ggtitle("Recovered COVID-19 Cases in the World.") +
+guides( colour = guide_legend()) +
+theme_void()  #gets rid of axes
+p2
+```
+
+The scatterplots above gives us a general idea of reported cases of COVID-19 around the world. The markers with yellowish color reflect the relatively higher cases compared with those darker colors.Even though the desease originated in China, we can observe that the number of deaths are considerably low and we can also see there has been a lot of recovered patients to this date from the maps, we can see the US hits the most confirmed and death cases but seems to staggering below with recovery cases compared to South American Countries,India and Other Asian countries.European countries such as UK,Russia,Spain,France and Italy, UK, French, also shows a significantly higher number of all cases combined.
+
+# 2.3 Density Line Plot of confirmed,deaths and recovered cases.
+
+```{r total cases worldwide}
+# Plotting the total cases by type worldwide:
+library(plotly)
+coronavirus %>% 
+  group_by(type, date) %>%
+  summarise(total_cases = sum(cases)) %>%
+  pivot_wider(names_from = type, values_from = total_cases) %>%
+  arrange(date) %>%
+  mutate(active = confirmed - death - recovered) %>%
+  mutate(active_total = cumsum(active),
+         recovered_total = cumsum(recovered),
+         death_total = cumsum(death)) %>%
+  plot_ly(x = ~ date,
+          y = ~ active_total,
+          name = 'Active', 
+          fillcolor = '#1f77b4',
+          type = 'scatter',
+          mode = 'none', 
+          stackgroup = 'one') %>%
+  add_trace(y = ~ death_total, 
+            name = "Death",
+            fillcolor = '#E41317') %>%
+  add_trace(y = ~recovered_total, 
+            name = 'Recovered', 
+            fillcolor = 'forestgreen') %>%
+  layout(title = "Distribution of Covid19 Cases Worldwide",
+         legend = list(x = 0.1, y = 0.9),
+         yaxis = list(title = "Number of Cases"),
+         xaxis = list(title = "Source: Johns Hopkins University Center for Systems Science and Engineering"))
+```
+
+Here I have only shown the increasing trends for Recovered,Death and Active cases over time,the grapgh clearly shows that the percentage prpoprtion of people recovering from the deasease is higher than the active and death cases combined.
+
+# Descriptive analysis on infected, mortality and recovery rates
+
+## 2.4 Most Affected Countries in the world
+
+I started by mining my data and split it into a data-frame that shows detailed data of country by country  using the codes below.The table below shows the first 6 countries of the data frame.
+
+```{r country_by_country_case}
+total_cases_per_country <- data.frame(coronavirus$country,coronavirus$type,coronavirus$cases)
+# renaming columns
+colnames(total_cases_per_country)[1:3] <-c("country","type","cases")
+total_cases_per_country_wide<- total_cases_per_country%>%
+group_by(country, type) %>%
+summarise(total_cases = sum(cases)) %>%
+pivot_wider(names_from = type, values_from = total_cases) %>%
+mutate(active = confirmed - death - recovered) %>%
+mutate(active_total = cumsum(active),
+recovered_total = cumsum(recovered),
+death_total = cumsum(death))
+head(total_cases_per_country_wide)
+```
+
+I have use the code below to arrange the countries in order of the number of confirmed cases.The table shows the first 6 least affected countries.
+
+```{r sum totals_per_country}
+sum_total_cases_per_country <- data.frame(total_cases_per_country_wide$country,total_cases_per_country_wide$confirmed, total_cases_per_country_wide$active_total,total_cases_per_country_wide$recovered_total,total_cases_per_country_wide$death_total)
+head(sum_total_cases_per_country)
+colnames(sum_total_cases_per_country)[1:5]<-c("country","confirmed","active_total","recovered_total","death_total")
+head(sum_total_cases_per_country)
+countries_in_order <- sum_total_cases_per_country[order(sum_total_cases_per_country[, "confirmed"]), , drop = FALSE]
+head(countries_in_order)
+```
+
+I am going to analyse the first 20 most affected countries and the least 20 affected countries using the codes below. Here I have used various charts to show how information can be mined from data sources.
+
+## 20 Most affected Countries in the world:
+
+```{r 20 most affected countries in the world}
+most_affected_countries_20 <- tail(countries_in_order,n=20)
+most_affected_countries_20
+```
+
+stacked bar graph for 20 most affected countries
+
+
+```{r stacked bar graph}
+data_most <- data.frame(most_affected_countries_20$country, most_affected_countries_20$active_total,most_affected_countries_20$recovered_total,most_affected_countries_20$death_total)
+fig <- plot_ly(data_most, x = ~most_affected_countries_20.country, y = ~most_affected_countries_20.active_total, type = 'bar', name = 'active',width = 1)
+fig <- fig %>% add_trace(y = ~most_affected_countries_20.recovered_total, name = 'recovered')
+fig <- fig %>% add_trace(y = ~most_affected_countries_20.death_total, name = 'death')
+fig <- fig %>% layout(yaxis = list(title = 'Count'), legend = list(x = 0.1, y = 1.8),barmode = 'stack')
+fig
+```
+
+The cases reported are visualized in analytics dashboard to show the outbreak trend
+for confirmed, recovered and deaths cases for all regions and countries. This aligns with our
+objectives to show the outbreak progress over the period of time for each segment. It was found
+that the total number of confirmed cases for all countries and regions are increasing steadily, with India and bulgaria have the most numbers of people that have recovered from covid.
+
+a.Confirmed cases: Analysis using lollipop chart
+
+```{r most confirmed lollipop chart}
+lollipop_chart<-most_affected_countries_20 %>%
+mutate(prop = confirmed / sum(countries_in_order$confirmed)*100) -> mydf 
+ggdotchart(lollipop_chart, x = "country", y = "confirmed",
+color="country",
+sorting = "ascending",                        # Sort value in descending order
+add = "segments",                             # Add segments from y = 0 to dots
+dot.size = 6,                                 # Large dot size
+label = round(lollipop_chart$prop,2),
+font.label = list(color = "black", size = 9,
+vjust = 0.5),               # Adjust label parameters
+ggtheme = theme_pubr()                        # ggplot2 theme
+)
+```
+
+USA has the highest number of confirmed cases compared to other regions. Next to USA, India,Brazil,France,UK,Ukraine,Turkey,Spain,South Africa,Russia, Mexico and Iran show high number of infected patients.
+
+b. Recovery rates: Analysis using bar graph
+
+```{r recovery rate}
+bar_graph<-ggplot(data=most_affected_countries_20, aes(x=country, y=recovered_total)) +
+geom_bar(stat="identity", fill="steelblue")+theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+bar_graph
+```
+
+From the graphs we can see that even though USA has the highest number of confirmed cases compared to India and Brazil, their recovery rate is higher compared to USA.from a medical point of view,this is an interesting fact to research further.
+
+c. death rates:Analysis using treemap
+
+```{r death}
+library(treemap)
+treemap(most_affected_countries_20, #Your data frame object
+index=c("country"),  #A list of your categorical variables
+vSize = "death_total",  #This is your quantitative variable
+type="index", #Type sets the organization and color scheme of your treemap
+palette = "Reds",  #Select your color palette from the RColorBrewer presets or make your own.
+title="Death Totals", #Customize your title
+fontsize.title = 14 #Change the font size of the title
+)
+```
+
+The treemap shows that countries with the highest confirmed rates do also have the highest mortality rates.An interesting point is why South Africa has a significant number of mortality rates although its confrimed cases are lower than Iran,Turkey and Ukraine.
+
+## 20 least affected Countries in the world:
+
+```{r 20 least affected countries in the world}
+least_affected_countries_20 <- head(countries_in_order,n=20)
+least_affected_countries_20
+```
+
+stacked bar graph for 20 least affected countries
+
+```{r stacked least bar graph}
+data_least <- data.frame(least_affected_countries_20$country, least_affected_countries_20$active_total,least_affected_countries_20$recovered_total,least_affected_countries_20$death_total)
+fig <- plot_ly(data_least, x = ~least_affected_countries_20.country, y = ~least_affected_countries_20.active_total, type = 'bar', name = 'active',width = 1)
+fig <- fig %>% add_trace(y = ~least_affected_countries_20.recovered_total, name = 'recovered')
+fig <- fig %>% add_trace(y = ~least_affected_countries_20.death_total, name = 'death')
+fig <- fig %>% layout(yaxis = list(title = 'Count'),legend = list(x = 0.1, y = 1.8), barmode = 'stack')
+fig
+```
+
+a.Confirmed cases: Analysis using pie chart
+
+```{r least confirmed lollipop chart}
+lollipop_chart1<-least_affected_countries_20 %>%
+mutate(prop = confirmed / sum(countries_in_order$confirmed)*100) -> mydf 
+ggdotchart(lollipop_chart1, x = "country", y = "confirmed",
+color="country",
+sorting = "ascending",                        # Sort value in descending order
+add = "segments",                             # Add segments from y = 0 to dots
+dot.size = 6,                                 # Large dot size
+label = round(lollipop_chart1$prop,10),
+font.label = list(color = "black", size = 9,
+vjust = 0.5),               # Adjust label parameters
+ggtheme = theme_pubr()                        # ggplot2 theme
+)
+```
+
+Interestingly,most countries in this band shows almost zero ppercantage of confirmed cases.A closer look at the countries shows that these countries have very low populations,are unlikely to be visted by international tourists and that most are islands with the exception of Brunei,Bhutan which are tiny Kindoms.This data shows the safest countries not impacted by the pandemic.
+
+b. Recovery rates: Analysis using bar graph
+
+```{r least recivered bar graph}
+bar_graph1<-ggplot(data=least_affected_countries_20, aes(x=country, y=recovered_total)) +
+geom_bar(stat="identity", fill="steelblue")+theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+bar_graph1
+```
+
+Bhutan,Cambodia,Saint Lucia,Seychellels and Barbuda have high number of people recovering from the virus.
+
+c. death rates:Analysis using treemap
+
+```{r}
+treemap(least_affected_countries_20, #Your data frame object
+index=c("country"),  #A list of your categorical variables
+vSize = "death_total",  #This is your quantitative variable
+type="index", #Type sets the organization and color scheme of your treemap
+palette = "Reds",  #Select your color palette from the RColorBrewer presets or make your own.
+title="Death Totals", #Customize your title
+fontsize.title = 14 #Change the font size of the title
+)
+```
+
+The treemap is consistent with the above 2 graphs,in this band the countries with the highest number of confirmed cases,do also have the highest number of recovered and deaths respectively.
+
+# 3.Conclusion
+
+Data visualization is the most effective method to illustrate complex information. It also plays a vital role in data interpretation and insight generation. It’s a powerful asset that can convey insights as stories. It can make simplify thousands of complex numbers and convert them into an easily digestible visual.
+
+Even in the case of Artificial Intelligence and Machine Learning in the market, we always need data visualization to make the analysis more insightful. Choropleth maps can be very useful when it comes to plotting any data on a nationwide or worldwide scale.
+
+
+# 4.Bibliography
+
+Provided by Johns Hopkins University Center for Systems Science and Engineering (JHU CSSE): https://systems.jhu.edu/
+
+
