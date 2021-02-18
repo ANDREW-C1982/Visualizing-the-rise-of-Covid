@@ -1,0 +1,2 @@
+# Visualizing-the-rise-of-Covid
+With international spread of the coronavirus disease 2019 (COVID-19),this essay seeks to provide a direct visualization of the COVID-19 pandemic risk; infographics are provided in the figures. By showing visually confirmed cases, active cases, deaths and recovery cases of COVID-19 across the globe, visual graphs provide a relatively simple yet powerful way to explain the behavior of this infectious disease by displaying the most affected countries and least affected countries in graphs.
